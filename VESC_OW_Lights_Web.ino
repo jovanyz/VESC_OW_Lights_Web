@@ -855,15 +855,15 @@ class NeoPatterns : public Adafruit_NeoPixel
 
 
 // 3. PATTERN TOOLS==========================================================================================================================================
-
     // Modifies colors for "tail" lights & when braking is detected-----------------------
     void checkBraking(){
       if (vescDir == 0){
         braking = false;
+        brakingFaded = true;
       }
       if (braking) {
         brakingFaded = false;
-        if(rpmHist[0] > 0){
+        if(rpmHist[0] >= 0){
           for(int i = breakPoint; i < numPixels(); i++){
             setPixelColor(i, Color(255, 0, 0));
           } 
@@ -877,7 +877,7 @@ class NeoPatterns : public Adafruit_NeoPixel
           } 
         }
       } else if (!brakingFaded && !braking) {
-        if (rpmHist[0] > 0){
+        if (rpmHist[0] >= 0){
           for (int i = breakPoint; i < numPixels(); i++){
             uint8_t red = min(255 * (double(brakingFadeSteps - brakingFadeIndex) / double(brakingFadeSteps)) + Red(getPixelColor(i)), 255);
             uint8_t green = Green(getPixelColor(i)) * (double(brakingFadeIndex) / double(brakingFadeSteps));
@@ -891,17 +891,13 @@ class NeoPatterns : public Adafruit_NeoPixel
             uint8_t blue = Blue(getPixelColor(i)) * (double(brakingFadeIndex) / double(brakingFadeSteps));
             setPixelColor(i, Color(red, green, blue));
           }
-        } else{
-          ;
         }
         brakingFadeIndex++;
         if (brakingFadeIndex == brakingFadeSteps){
           brakingFaded = true;
           brakingFadeIndex = 0;
         }
-      } else{
-       ;
-      } 
+      }
     }
     
     //Called by some modes, rescales colors to add more red to "tail" lights
@@ -1633,7 +1629,7 @@ void getVescData() {
         return;                                                            // dont change anything
       }
     } else if (simulateRpmData){                                           // for debug / demo
-      rpm = 8000.0 * (sin(double(millis())/1500.0));                       // Feeds sinewave data to rpm for testing lights reacting to speed data functions
+      rpm = 8000.0 * (sin(double(millis())/3000.0));                       // Feeds sinewave data to rpm for testing lights reacting to speed data functions
 
        if(rpm > idleThresholdRpm) {
           vescDir = 1;
