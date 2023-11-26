@@ -3,17 +3,17 @@ char pass[] = "vescpassword";                          // network password (use 
 
 const bool enableUART = false;                         // set "true" if VESC is connected to UART. Makes strip laggy if not configured.
 
-const int datPinNum = 13;                              // GPIO pin connected to LED data line
+const int datPinNum = 13;                              // GPIO pin connected to LED data line (13 is A5 on Nano RP2040)
 const int master_brightness = 55;                      // Hard brightness limiter, (0-255). Independent of slider. Choose wisely! Make sure you have enough amps!
 
-const double stripLength = 100;                         // number of LEDs 
-const int breakPoint = 50;                             // index of first tail-light pixel
+const double stripLength = 90;                         // number of LEDs 
+const int breakPoint = 45;                             // index of first tail-light pixel
 
 const int seed = 0;                                    // starting pixel of Colorwipe Pattern
 
 // For Asymmetric Fade Patterns (Modes 4 - 8)
-const int pts = 10;                                     // number of guidepoints in primary loop
-const double modif = 100;                               // next largest easily divisible number if LED number is prime or inconvenient
+const int pts = 9;                                     // number of guidepoints in primary loop
+const double modif = 90;                               // next largest easily divisible number if LED number is prime or inconvenient
 const double divBy = 10.0;                             // modif = this number * pts, 
 
 // For classic Rainbow pattern
@@ -30,7 +30,7 @@ const int idleBrightness = 40;                         // brightness percent whe
 const double idleThresholdMph = 1.5;                   // mph threshold to escape idle mode. 
 const double brakingSens = 0.4;                        // 0 to 1, brakelight sensitivity, 1 is sensitive, 0 is sluggish
 
-const bool simulateRpmData = true;                    // feed sine wave data into rpmHist
+const bool simulateRpmData = false;                    // feed sine wave data into rpmHist
 
 
 
