@@ -10,7 +10,7 @@ Huge thanks to  <http://www.penguintutor.com/projects/arduino-rp2040-pixelstrip>
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-Default WiFi name is "myVESC", and default password is "yourpassword". Once connected, visit the web address: http://192.168.4.1.cAll website commands will be sent to the LEDs on clicking Apply.
+Default WiFi name is "myVESC", and default password is "yourpassword". Once connected, visit the web address: http://192.168.4.1 .  All website commands will be sent to the LEDs on clicking Apply.
 
 Personal LED parameters can be set in config.h. 
 
