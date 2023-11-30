@@ -17,7 +17,7 @@ const double modif = 50;                               // next largest easily di
 const double divBy = 10.0;                             // modif = this number * pts, 
 
 // For classic Rainbow pattern
-const double numRainbow = 3.0;                         // number of full rainbows distributed in stripLength
+const double numRainbow = 2.0;                         // number of full rainbows distributed in stripLength
 
 // For Fireflies Pattern [M9]
 const int numFiFl = 16;                                // number of "fireflies"
@@ -29,9 +29,9 @@ const int numConf = 8;                                 // number of colored spec
 const int idleBrightness = 40;                         // brightness percent when at idle speeds (0 to 100). Dims lights when not riding
 const double idleThresholdMph = 1.5;                   // mph threshold to escape idle mode. 
 const double brakingSens = 0.4;                        // 0 to 1, brakelight sensitivity, 1 is sensitive, 0 is sluggish
-const int bootMode = 12;                               // 0 to 12, wihich mode to start immediately after OW power on
+const int bootMode = 0;                               // 0 to 12, wihich mode to start immediately after OW power on
 
-const bool simulateRpmData = true;                    // feed sine wave data into rpmHist
+const bool simulateRpmData = false;                    // feed sine wave data into rpmHist
 
 
 
