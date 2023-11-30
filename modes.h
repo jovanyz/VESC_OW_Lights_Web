@@ -2,7 +2,7 @@
 // All sequence functions must follow this format
 // mode_position is the position in the sequence, this needs is defined as long for the UNO WiFi which would otherwise be limited to (2^8)/2
 
-typedef long (*pfnSequence)(long mode_position, bool reverse, uint32_t colors[], int num_colors);
+typedef long (*pfnSequence)(long mode_position);
 
 struct mode {
         char * mode_name;            // Lower case - no spaces 
@@ -14,23 +14,23 @@ struct mode {
 
 
 // define all sequences here. All these parameters are required even if the sequence doesn't use them (eg. allOff does not use colors or num_colors)
-long Default (long mode_position, bool reverse, uint32_t colors[], int num_colors);
-long Rainbow(long mode_position, bool reverse, uint32_t colors[], int num_colors);
-long ColorWipe(long mode_position, bool reverse, uint32_t colors[], int num_colors);
-long ColorFade(long mode_position, bool reverse, uint32_t colors[], int num_colors);
-long Lava(long mode_position, bool reverse, uint32_t colors[], int num_colors);
-long Canopy(long mode_position, bool reverse, uint32_t colors[], int num_colors);
-long Ocean(long mode_position, bool reverse, uint32_t colors[], int num_colors);
-long RollingWave(long mode_position, bool reverse, uint32_t colors[], int num_colors);
-long ColorWave(long mode_position, bool reverse, uint32_t colors[], int num_colors);
-long Fireflies(long mode_position, bool reverse, uint32_t colors[], int num_colors);
-long Confetti(long mode_position, bool reverse, uint32_t colors[], int num_colors);
-long Comet(long mode_position, bool reverse, uint32_t colors[], int num_colors);
-long Sunset(long mode_position, bool reverse, uint32_t colors[], int num_colors);
-long PixelFinder(long mode_position, bool reverse, uint32_t colors[], int num_colors);
-long unused0(long mode_position, bool reverse, uint32_t colors[], int num_colors);
-long unused1(long mode_position, bool reverse, uint32_t colors[], int num_colors);
-long unused2(long mode_position, bool reverse, uint32_t colors[], int num_colors);
+long Default (long mode_position);
+long Rainbow(long mode_position);
+long ColorWipe(long mode_position);
+long ColorFade(long mode_position);
+long Lava(long mode_position);
+long Canopy(long mode_position);
+long Ocean(long mode_position);
+long RollingWave(long mode_position);
+long ColorWave(long mode_position);
+long Fireflies(long mode_position);
+long Confetti(long mode_position);
+long Comet(long mode_position);
+long PacMan(long mode_position);
+long PixelFinder(long mode_position);
+long unused0(long mode_position);
+long unused1(long mode_position);
+long unused2(long mode_position);
 
 // Add new sequences to this structure. This is used for web page to know what options are available
 // The group argument can be used to group certain sequences together (eg. to only show certain sequences or display on a different tab)
@@ -47,7 +47,7 @@ struct mode modes[] {
     { .mode_name = "fireflies", .title = "Fireflies", .description = "Flickering Green Speckles", .group = 3, .seqFunction = Fireflies },
     { .mode_name = "confetti", .title = "Confetti", .description = "Multicolor Speckles", .group = 3, .seqFunction = Confetti },
     { .mode_name = "comet", .title = "Comet", .description = "Comet with Tail", .group = 4, .seqFunction = Comet },
-    { .mode_name = "sunset", .title = "Sunset", .description = "Warm White Fade to Black", .group = 4, .seqFunction = Sunset },
+    { .mode_name = "pacman", .title = "PacMan", .description = "Warm White Fade to Black", .group = 4, .seqFunction = PacMan },
     { .mode_name = "pixelfinder", .title = "PixelFinder", .description = "Use Brightness Slider to Select Pixel", .group = 4, .seqFunction = PixelFinder },
     { .mode_name = "empty", .title = "NA", .description = "unused", .group = 5, .seqFunction = unused0 },
     { .mode_name = "empty1", .title = "NA", .description = "unused", .group = 5, .seqFunction = unused1 },
