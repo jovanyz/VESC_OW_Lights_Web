@@ -16,27 +16,27 @@ VescUart vesc;
 
 //=====================================================================CONTENTS============================================================================
 /*
-   1. CLASS & VARIABLE SETUP......................(L:44-227)
-   2. PATTERNS....................................(182-227)
-    2.0 Standard..................................(243-328)
-    2.1 Rainbow...................................(332-354)
-    2.2 Color Wipe................................(358-377)
-    2.3 Color Fade................................(381-410)
-    2.4 Lava......................................(414-461)
-    2.5 Canopy....................................(464-511)
-    2.6 Ocean.....................................(515-563)
-    2.7 Rolling Wave..............................(567-613)
-    2.8 Color Wave................................(617-662)
-    2.9 Fireflies.................................(666-709)
-    2.10 Confetti.................................(713-741)
-    2.11 Comet....................................(745-785)
-    2.12 Sunset...................................(789-834)
-   3. PATTERN TOOLS...............................(866-1031)
-   4. COMMAND UPDATER FOR LEDs....................(1038-1119)
-   5. TRANSITION ROUTINES.........................(1124-1403)
-   6. COMPLETION ROUTINES.........................(1408-1605)
-   7. GETTING WEB & UART DATA.....................(1608-1954)
-   8. ARDUINO MAIN LOOP...........................(1960-end)
+   1. CLASS & VARIABLE SETUP......................
+   2. PATTERNS....................................
+    2.0 Standard..................................
+    2.1 Rainbow...................................
+    2.2 Color Wipe................................
+    2.3 Color Fade................................
+    2.4 Lava......................................
+    2.5 Canopy....................................
+    2.6 Ocean.....................................
+    2.7 Rolling Wave..............................
+    2.8 Color Wave................................
+    2.9 Fireflies.................................
+    2.10 Confetti.................................
+    2.11 Comet....................................
+    2.12 PacMan...................................
+   3. PATTERN TOOLS...............................
+   4. COMMAND UPDATER FOR LEDs....................
+   5. TRANSITION ROUTINES.........................
+   6. COMPLETION ROUTINES.........................
+   7. GETTING WEB & UART DATA.....................
+   8. ARDUINO MAIN LOOP...........................
 */
 
 
@@ -96,7 +96,7 @@ int dirSet = 0;                            // which direction was just set as fr
 const double idleThresholdRpm = idleThresholdMph / (11.0 * PI * 60.0) * 63360.0 * 15.0;     // converts mph to erpm (15 for 30/2 motor poles)
 
 // Pattern Types (any new pattern must be added here):
-enum  pattern { NONE, STANDARD, RAINBOW, COLOR_WIPE, FADE, LAVA, CANOPY, OCEAN, ROLLING_WAVE, COLOR_WAVE, FIREFLIES, CONFETTI, COMET, SUNSET, PIXEL_FINDER};
+enum  pattern { NONE, STANDARD, RAINBOW, COLOR_WIPE, FADE, LAVA, CANOPY, OCEAN, ROLLING_WAVE, COLOR_WAVE, FIREFLIES, CONFETTI, COMET, PACMAN, PIXEL_FINDER};
 
 // Patern directions supported:
 enum  direction { FORWARD, REVERSE };
@@ -170,8 +170,8 @@ class NeoPatterns : public Adafruit_NeoPixel
           case COMET:
             CometUpdate();
             break;
-          case SUNSET:
-            SunsetUpdate();
+          case PACMAN:
+            PacManUpdate();
             break;
           case PIXEL_FINDER:
             PixelFinderUpdate();
@@ -241,10 +241,10 @@ class NeoPatterns : public Adafruit_NeoPixel
 
 // 2. PATTERNS==========================================================================================================================================
 // 2.0 Standard-------------------------------------------------------------
-    void Standard(uint8_t interval, direction dir = FORWARD)
+    void Standard(direction dir = FORWARD)
     {
       ActivePattern = STANDARD;
-      Interval = interval;
+      Interval = 50;
       TotalSteps = 10;
       Index = 0;
       Direction = dir;
@@ -357,10 +357,10 @@ class NeoPatterns : public Adafruit_NeoPixel
 
 // 2.2 ColorWipe--------------------------------------------------------------
     // Initialize for a ColorWipe
-    void ColorWipe(uint8_t interval, direction dir = FORWARD)
+    void ColorWipe(direction dir = FORWARD)
     {
       ActivePattern = COLOR_WIPE;
-      Interval = interval;
+      Interval = max(70.0 - (fabs(rpmHist[0]) / 164.0) + 5.0, 1.0);
       TotalSteps = stripLength - 1;
       Index = 0;
     }
@@ -368,12 +368,12 @@ class NeoPatterns : public Adafruit_NeoPixel
     // Update the Color Wipe Pattern
     void ColorWipeUpdate()
     {
-      int loc1 = Index + 1;
-      ColorSetRange(DimColor(Color2, cmdArr[5]), 0, loc1);
-      ColorSetRange(DimColor(Color1, cmdArr[5]), loc1, stripLength);
+      ColorSetRange(DimColor(Color2, cmdArr[5]), 0, Index + 1);
+      ColorSetRange(DimColor(Color1, cmdArr[5]), Index + 1, stripLength);
       checkBraking();
       show();
       Increment();
+      Interval = max(70.0 - (fabs(rpmHist[0]) / 164.0) + 5.0, 1.0);
     }
 
 
@@ -440,13 +440,6 @@ class NeoPatterns : public Adafruit_NeoPixel
         uint8_t blue1 = ((fadeArr[pts - 1][2] * (pixR - j)) + (fadeArr[0][2] * j)) / pixR;
         SetPixelColorAdj((modif / divBy - 1) * pixR + j, DimColor(Color(red1, green1, blue1), cmdArr[5]));
       }
-
-      for (int i = 0; i < pts; i++)
-      {
-        fadeArr[i][0] = ((fadeFromArr[i][0] * (TotalSteps - Index)) + (fadeToArr[i][0] * Index)) / TotalSteps;
-        fadeArr[i][1] = ((fadeFromArr[i][1] * (TotalSteps - Index)) + (fadeToArr[i][1] * Index)) / TotalSteps;
-        fadeArr[i][2] = ((fadeFromArr[i][2] * (TotalSteps - Index)) + (fadeToArr[i][2] * Index)) / TotalSteps;
-      }
       
       checkBraking();
       show();
@@ -489,13 +482,6 @@ class NeoPatterns : public Adafruit_NeoPixel
         uint8_t green1 = ((fadeArr[pts - 1][1] * (pixR - j)) + (fadeArr[0][1] * j)) / pixR;
         uint8_t blue1 = ((fadeArr[pts - 1][2] * (pixR - j)) + (fadeArr[0][2] * j)) / pixR;
         SetPixelColorAdj((modif / divBy - 1) * pixR + j, DimColor(Color(red1, green1, blue1), cmdArr[5]));
-      }
-
-      for (int i = 0; i < pts; i++)
-      {
-        fadeArr[i][0] = ((fadeFromArr[i][0] * (TotalSteps - Index)) + (fadeToArr[i][0] * Index)) / TotalSteps;
-        fadeArr[i][1] = ((fadeFromArr[i][1] * (TotalSteps - Index)) + (fadeToArr[i][1] * Index)) / TotalSteps;
-        fadeArr[i][2] = ((fadeFromArr[i][2] * (TotalSteps - Index)) + (fadeToArr[i][2] * Index)) / TotalSteps;
       }
 
       checkBraking();
@@ -543,13 +529,6 @@ class NeoPatterns : public Adafruit_NeoPixel
         SetPixelColorAdj((modif / divBy - 1) * pixR + j, DimColor(Color(red1, green1, blue1), cmdArr[5]));
       }
 
-      for (int i = 0; i < pts; i++)
-      {
-        fadeArr[i][0] = ((fadeFromArr[i][0] * (TotalSteps - Index)) + (fadeToArr[i][0] * Index)) / TotalSteps;
-        fadeArr[i][1] = ((fadeFromArr[i][1] * (TotalSteps - Index)) + (fadeToArr[i][1] * Index)) / TotalSteps;
-        fadeArr[i][2] = ((fadeFromArr[i][2] * (TotalSteps - Index)) + (fadeToArr[i][2] * Index)) / TotalSteps;
-      }
-      
       checkBraking();
       show();
       Increment();
@@ -593,13 +572,6 @@ class NeoPatterns : public Adafruit_NeoPixel
         SetPixelColorAdj((modif / divBy - 1)  * pixR + j, DimColor(Color(red1, green1, blue1), cmdArr[5]));
       }
 
-      for (int i = 0; i < pts; i++)
-      {
-        fadeArr[i][0] = ((fadeFromArr[i][0] * (TotalSteps - Index)) + (fadeToArr[i][0] * Index)) / TotalSteps;
-        fadeArr[i][1] = ((fadeFromArr[i][1] * (TotalSteps - Index)) + (fadeToArr[i][1] * Index)) / TotalSteps;
-        fadeArr[i][2] = ((fadeFromArr[i][2] * (TotalSteps - Index)) + (fadeToArr[i][2] * Index)) / TotalSteps;
-      }
-
       checkBraking();
       show();
       Increment();
@@ -639,13 +611,6 @@ class NeoPatterns : public Adafruit_NeoPixel
         uint8_t green1 = ((fadeArr[pts - 1][1] * (pixR - j)) + (fadeArr[0][1] * j)) / pixR;
         uint8_t blue1 = ((fadeArr[pts - 1][2] * (pixR - j)) + (fadeArr[0][2] * j)) / pixR;
         SetPixelColorAdj((modif / divBy - 1) * pixR + j, DimColor(Color(red1, green1, blue1), cmdArr[5]));
-      }
-
-      for (int i = 0; i < pts; i++)
-      {
-        fadeArr[i][0] = ((fadeFromArr[i][0] * (TotalSteps - Index)) + (fadeToArr[i][0] * Index)) / TotalSteps;
-        fadeArr[i][1] = ((fadeFromArr[i][1] * (TotalSteps - Index)) + (fadeToArr[i][1] * Index)) / TotalSteps;
-        fadeArr[i][2] = ((fadeFromArr[i][2] * (TotalSteps - Index)) + (fadeToArr[i][2] * Index)) / TotalSteps;
       }
 
       TailTint();
@@ -786,53 +751,50 @@ class NeoPatterns : public Adafruit_NeoPixel
 
 
 
-// 2.12 Sunset--------------------------------------------------------------
-    void Sunset(uint8_t interval, uint16_t steps)
-    {
-      ActivePattern = SUNSET;
-      Interval = interval;
-      TotalSteps = steps * 6;
+// 2.12 PacMan--------------------------------------------------------------
+    void PacMan(){
+      ActivePattern = PACMAN;
+      Interval = max(20.0 , 200.0 - (fabs(rpmHist[0]) / 57.0) + 20.0);   // equals to 0 + 5.0 ms at 25mph
+      TotalSteps = 5;
       Index = 0;
     }
-    void SunsetUpdate() {
-      uint8_t red;
-      uint8_t green;
-      uint8_t blue;
-      if (Index < (TotalSteps / 6)) {         // a fade to colors of the sunset over time
-        red = ((200 * ((TotalSteps / 6) - (Index % (TotalSteps / 6)))) + (137 * (Index % (TotalSteps / 6)))) / (TotalSteps / 6);
-        green = ((200 * ((TotalSteps / 6) - (Index % (TotalSteps / 6)))) + (46 * (Index % (TotalSteps / 6)))) / (TotalSteps / 6);
-        blue = ((70 * ((TotalSteps / 6) - (Index % (TotalSteps / 6)))) + (30 * (Index % (TotalSteps / 6)))) / (TotalSteps / 6);
-      } else if (Index < (TotalSteps / 6) * 2) {
-        red = ((137 * ((TotalSteps / 6) - (Index % (TotalSteps / 6)))) + (119 * (Index % (TotalSteps / 6)))) / (TotalSteps / 6);
-        green = ((46 * ((TotalSteps / 6) - (Index % (TotalSteps / 6)))) + (20 * (Index % (TotalSteps / 6)))) / (TotalSteps / 6);
-        blue = ((30 * ((TotalSteps / 6) - (Index % (TotalSteps / 6)))) + (1 * (Index % (TotalSteps / 6)))) / (TotalSteps / 6);
-      } else if (Index < (TotalSteps / 6) * 3) {
-        red = ((119 * ((TotalSteps / 6) - (Index % (TotalSteps / 6)))) + (30 * (Index % (TotalSteps / 6)))) / (TotalSteps / 6);
-        green = ((20 * ((TotalSteps / 6) - (Index % (TotalSteps / 6)))) + (0 * (Index % (TotalSteps / 6)))) / (TotalSteps / 6);
-        blue = ((1 * ((TotalSteps / 6) - (Index % (TotalSteps / 6)))) + (16 * (Index % (TotalSteps / 6)))) / (TotalSteps / 6);
-      } else if (Index < (TotalSteps / 6) * 4) {
-        red = ((30 * ((TotalSteps / 6) - (Index % (TotalSteps / 6)))) + (0 * (Index % (TotalSteps / 6)))) / (TotalSteps / 6);
-        green = ((0 * ((TotalSteps / 6) - (Index % (TotalSteps / 6)))) + (0 * (Index % (TotalSteps / 6)))) / (TotalSteps / 6);
-        blue = ((16 * ((TotalSteps / 6) - (Index % (TotalSteps / 6)))) + (0 * (Index % (TotalSteps / 6)))) / (TotalSteps / 6);
-      } else if (Index < (TotalSteps / 6) * 5) {
-        red = 0;
-        green = 0;
-        blue = 0;
+
+    void PacManUpdate(){
+      if (rpmHist[0] < 0){
+        ColorSetRange(DimColor(Color(cmdArr[2], cmdArr[3], cmdArr[4]), cmdArr[5]), breakPoint, numPixels());
+        for(int i = 0; i < breakPoint - 1; i++){
+          if(i % 5 == Index){
+            setPixelColor(breakPoint - (i + 1), Color(25, 25, 10));
+          }else{
+            setPixelColor(breakPoint - (i + 1), Color(0, 0, 0));
+          }
+        }
+        if(Index % 4 == 0 || Index % 4 == 1){
+          setPixelColor(0, Color(255, 168, 0));
+        } else {
+          setPixelColor(0, Color(0, 0, 0));
+        }
       } else {
-        red = ((0 * ((TotalSteps / 6) - (Index % (TotalSteps / 6)))) + (200 * (Index % (TotalSteps / 6)))) / (TotalSteps / 6);
-        green = ((0 * ((TotalSteps / 6) - (Index % (TotalSteps / 6)))) + (200 * (Index % (TotalSteps / 6)))) / (TotalSteps / 6);
-        blue = ((0 * ((TotalSteps / 6) - (Index % (TotalSteps / 6)))) + (70 * (Index % (TotalSteps / 6)))) / (TotalSteps / 6);
+        ColorSetRange(DimColor(Color(cmdArr[2], cmdArr[3], cmdArr[4]), cmdArr[5]), 0, breakPoint);
+        for(int i = breakPoint; i < numPixels() -  1; i++){
+          if(i % 5 == Index){
+            setPixelColor(breakPoint + numPixels() - (i + 1), Color(25, 25, 10));
+          }else{
+            setPixelColor(breakPoint + numPixels() - (i + 1), Color(0, 0, 0));
+          }
+        }
+
+        if(Index % 4 == 0 || Index % 4 == 1){
+          setPixelColor(breakPoint, Color(255, 168, 0));
+        } else {
+          setPixelColor(breakPoint, Color(0, 0, 0));
+        }
       }
-      
-      //checkBraking();
-      //show();
-      ColorSet(DimColor(Color(red, green, blue), cmdArr[5]));
-      TailTint();
-      checkBraking();
+
       show();
       Increment();
+      Interval = max(20.0 , 200.0 - (fabs(rpmHist[0]) / 57.0) + 20.0);
     }
-
 
 
 // 2.13 PixelFinder--------------------------------------------------------------
@@ -911,7 +873,7 @@ class NeoPatterns : public Adafruit_NeoPixel
     
     //Called by some modes, rescales colors to add more red to "tail" lights
     void TailTint(){
-      if (vescDir == -1){
+      if (rpmHist[0] < 0){
         for(int i = 0; i < breakPoint; i++){
           int r = min(10 + 1.5 * double(Red(getPixelColor(i))), 255);
           int g = 0.3 * double(Green(getPixelColor(i)));
@@ -1053,7 +1015,7 @@ void ControlPanel() {   // called when cmdArr is updated. Calls for transition t
     switch (cmdArr[1]) {
       case 0:
         {
-          Strip.Standard(80);
+          Strip.Standard();
           break;
       } case 1:
         {
@@ -1061,7 +1023,7 @@ void ControlPanel() {   // called when cmdArr is updated. Calls for transition t
           break;
       } case 2:
         {
-          Strip.ColorWipe(20);
+          Strip.ColorWipe();
           break;
       } case 3:
         {
@@ -1101,7 +1063,7 @@ void ControlPanel() {   // called when cmdArr is updated. Calls for transition t
           break;
       } case 12:
         {
-          Strip.Sunset(20, 500);
+          Strip.PacMan();
           break;
       } case 13:
         {
@@ -1363,16 +1325,50 @@ void Transition() {
       {
         //built in already
         break;
-    } case 12: // sunset fade to start color 200,200,70
+    } case 12: // pacman fade to start config
       {
         for (int  i = 0; i < trSteps; i++) {
-          for (int j = 0; j < Strip.numPixels(); j++) {
-            uint32_t col = Strip.DimColor(Strip.Color(200, 200, 70), cmdArr[5]);
-            uint8_t red = ((Strip.Red(Strip.getPixelColor(j)) * (trSteps - i)) + (Strip.Red(col) * i)) / trSteps;
-            uint8_t green = ((Strip.Green(Strip.getPixelColor(j)) * (trSteps - i)) + (Strip.Green(col) * i)) / trSteps;
-            uint8_t blue = ((Strip.Blue(Strip.getPixelColor(j)) * (trSteps - i)) + (Strip.Blue(col) * i)) / trSteps;
+          if (rpmHist[0] < 0){
+            for (int j = breakPoint; j < Strip.numPixels(); j++) {
+              uint8_t red = (Strip.Red(Strip.getPixelColor(j)) * (trSteps - i) + cmdArr[2] * i) / trSteps;
+              uint8_t green = (Strip.Green(Strip.getPixelColor(j)) * (trSteps - i) + cmdArr[3] * i) / trSteps;
+              uint8_t blue = (Strip.Blue(Strip.getPixelColor(j)) * (trSteps - i) + cmdArr[4] * i) / trSteps;
 
-            Strip.SetPixelColorAdj(j, (Strip.Color(red, green, blue)));
+              Strip.SetPixelColorAdj(j, Strip.DimColor(Strip.Color(red, green, blue), cmdArr[5]));
+            }
+            for (int j = 1; j < breakPoint; j++) {
+              uint8_t red = (Strip.Red(Strip.getPixelColor(j)) * (trSteps - i)) / trSteps;
+              uint8_t green = (Strip.Green(Strip.getPixelColor(j)) * (trSteps - i)) / trSteps;
+              uint8_t blue = (Strip.Blue(Strip.getPixelColor(j)) * (trSteps - i)) / trSteps;
+
+              Strip.SetPixelColorAdj(j, Strip.DimColor(Strip.Color(red, green, blue), cmdArr[5]));
+            }
+          } else {
+            for (int j = 0; j < breakPoint; j++) {
+              uint8_t red = (Strip.Red(Strip.getPixelColor(j)) * (trSteps - i) + cmdArr[2] * i) / trSteps;
+              uint8_t green = (Strip.Green(Strip.getPixelColor(j)) * (trSteps - i) + cmdArr[3] * i) / trSteps;
+              uint8_t blue = (Strip.Blue(Strip.getPixelColor(j)) * (trSteps - i) + cmdArr[4] * i) / trSteps;
+
+              Strip.SetPixelColorAdj(j, Strip.DimColor(Strip.Color(red, green, blue), cmdArr[5]));
+            }
+            for (int j = breakPoint + 1; j <Strip.numPixels(); j++) {
+              uint8_t red = (Strip.Red(Strip.getPixelColor(j)) * (trSteps - i)) / trSteps;
+              uint8_t green = (Strip.Green(Strip.getPixelColor(j)) * (trSteps - i)) / trSteps;
+              uint8_t blue = (Strip.Blue(Strip.getPixelColor(j)) * (trSteps - i)) / trSteps;
+
+              Strip.SetPixelColorAdj(j, Strip.DimColor(Strip.Color(red, green, blue), cmdArr[5]));
+            }
+          }
+          if (rpmHist[0] < 0){
+            uint8_t redPM = (Strip.Red(Strip.getPixelColor(0)) * (trSteps - i) + 255 * i) / trSteps;
+            uint8_t greenPM = (Strip.Green(Strip.getPixelColor(0)) * (trSteps - i) + 168 * i) / trSteps;
+            uint8_t bluePM = (Strip.Blue(Strip.getPixelColor(0)) * (trSteps - i)) / trSteps;
+            Strip.SetPixelColorAdj(0, (Strip.Color(redPM, greenPM, bluePM)));
+          }else{
+            uint8_t redPM = (Strip.Red(Strip.getPixelColor(breakPoint)) * (trSteps - i) + 255 * i) / trSteps;
+            uint8_t greenPM = (Strip.Green(Strip.getPixelColor(breakPoint)) * (trSteps - i) + 168 * i) / trSteps;
+            uint8_t bluePM = (Strip.Blue(Strip.getPixelColor(breakPoint)) * (trSteps - i)) / trSteps;
+            Strip.SetPixelColorAdj(breakPoint, (Strip.Color(redPM, greenPM, bluePM)));
           }
           Strip.show();
           delay(20);
@@ -1638,7 +1634,7 @@ void getVescData() {
         return;                                                            // dont change anything
       }
     } else if (simulateRpmData){                                           // for debug / demo
-      rpm = 8000.0 * (sin(double(millis())/3000.0));                       // Feeds sinewave data to rpm for testing lights reacting to speed data functions
+      rpm = 11460.0 * (sin(double(millis())/3000.0));                       // Feeds sinewave data to rpm for testing lights reacting to speed data functions
 
        if(rpm > idleThresholdRpm) {
           vescDir = 1;
@@ -1685,7 +1681,7 @@ void handleWiFiUpdates(){
 
   // What action to perform
   // position in sequences array for selected sequence
-  static int mode = 0;
+  static int mode = cmdArr[1];
   // delay (speed) in ms (default 1 second)
   static int brightness = 100;
   // Whether direction reversed
@@ -1833,7 +1829,7 @@ void handleWiFiUpdates(){
                       // If no colors then set to default (1 white)
                       // shouldn't get this except on malformed request
                       if (num_colors == 0) {
-                        read_colors ("ff04ff");
+                        read_colors ("ffffff");
                       }
                   }
                   // Otherwise invalid argument so ignore
@@ -1958,7 +1954,7 @@ void printWifiStatus() {
 void setup() {
   //boot up command states
   cmdArr[0] = 1;            // 0 - off, 1 - on
-  cmdArr[1] = 0;            // modes 0 - 13
+  cmdArr[1] = bootMode;            // modes 0 - 13
   cmdArr[2] = 255;          // red
   cmdArr[3] = 255;          // green
   cmdArr[4] = 255;          // blue
@@ -2004,7 +2000,6 @@ void setup() {
   Strip.begin();
   Strip.setBrightness(master_brightness);   // Set hard brightness limiter
   ControlPanel();
-  Strip.checkBraking();
   Strip.show();
 }
 
