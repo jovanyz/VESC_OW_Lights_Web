@@ -42,8 +42,8 @@ const int bootBrightness = 90;                         // 0-100 inital brightnes
 
 
 // Debugand Demo Settings
-const bool simulateRpmData = true;                     // feed sine wave data into rpmHist
-const bool disableBrakingResponse = true;              // leave false. for debug/  testing 
+const bool simulateRpmData = false;                     // feed sine wave data into rpmHist
+const bool disableBrakingResponse = false;              // leave false. for debug/  testing 
 
 
 // Designed for static IP address so you can connect to Arduino
