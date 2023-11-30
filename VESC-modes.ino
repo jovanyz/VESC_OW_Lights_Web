@@ -88,6 +88,9 @@ long PacMan(long mode_position) {
   return mode_position;
 }
 
+long TailColor(long mode_position) {
+  return mode_position;
+}
 
 
 // From outside going inwards (both ends) turning off

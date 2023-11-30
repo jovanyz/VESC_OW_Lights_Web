@@ -1,3 +1,4 @@
+// General Inputs
 char ssid[] = "yourVESC";                              // network SSID (name)
 char pass[] = "vescpassword";                          // network password (use for WPA, or use as key for WEP)
 
@@ -9,30 +10,40 @@ const int master_brightness = 90;                      // Hard brightness limite
 const double stripLength = 50;                         // number of LEDs 
 const int breakPoint = 25;                             // index of first tail-light pixel
 
-const int seed = 0;                                    // starting pixel of Colorwipe Pattern
 
-// For Asymmetric Fade Patterns (Modes 4 - 8)
-const int pts = 5;                                     // number of guidepoints in primary loop
-const double modif = 50;                               // next largest easily divisible number if LED number is prime or inconvenient
-const double divBy = 10.0;                             // modif = this number * pts, 
 
-// For classic Rainbow pattern
-const double numRainbow = 2.0;                         // number of full rainbows distributed in stripLength
-
-// For Fireflies Pattern [M9]
-const int numFiFl = 16;                                // number of "fireflies"
-
-// For Confetti Pattern [M9]
-const int numConf = 8;                                 // number of colored speckles
-
-// VESC Related Inputs
-const int idleBrightness = 40;                         // brightness percent when at idle speeds (0 to 100). Dims lights when not riding
+// VESC Behavior Inputs
+const int idleBrightness = 30;                         // brightness percent when at idle (0 to 100). Dims lights when not riding
 const double idleThresholdMph = 1.5;                   // mph threshold to escape idle mode. 
 const double brakingSens = 0.4;                        // 0 to 1, brakelight sensitivity, 1 is sensitive, 0 is sluggish
-const int bootMode = 0;                               // 0 to 12, wihich mode to start immediately after OW power on
+const bool brakeBlink = true;                          // quick blink animation when brakelights come on
+const int brakeBlink_ms = 50;                          // milliseconds. How fast blink occurs
 
-const bool simulateRpmData = false;                    // feed sine wave data into rpmHist
 
+
+// Mode Inputs
+const double numRainbow = 3.0;                         // number of full rainbows distributed in stripLength
+const int seed = 0;                                    // starting pixel of Colorwipe Pattern
+const double divBy = 10.0;                             // choose a number ideally between 8 and 15
+const double modif = 50;                               // From number of LEDs, find the closest larger number with the divisor: divBy.
+const int pts = 5;                                     // pts = modif / divBy. Creates guidepoints for wave pattern
+const int numFiFl = 16;                                // number of "fireflies" added 8-20 are good values
+const int numConf = 8;                                 // number of colored speckles added for "Confetti" 4-10 are good values
+
+
+
+// Startup Inputs
+const int bootMode = 0;                                // 0 to 12, wihich mode to start initlaize after OW power on
+const int bootRed = 255;                               // 0-255 Rgb
+const int bootGreen = 255;                             // 0-255 rGb
+const int bootBlue = 255;                              // 0-255 rgB
+const int bootBrightness = 90;                         // 0-100 inital brightness percent
+
+
+
+// Debugand Demo Settings
+const bool simulateRpmData = true;                     // feed sine wave data into rpmHist
+const bool disableBrakingResponse = true;              // leave false. for debug/  testing 
 
 
 // Designed for static IP address so you can connect to Arduino

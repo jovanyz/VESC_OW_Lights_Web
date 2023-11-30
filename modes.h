@@ -27,6 +27,7 @@ long Fireflies(long mode_position);
 long Confetti(long mode_position);
 long Comet(long mode_position);
 long PacMan(long mode_position);
+long TailColor(long mode_position);
 long PixelFinder(long mode_position);
 long unused0(long mode_position);
 long unused1(long mode_position);
@@ -47,7 +48,8 @@ struct mode modes[] {
     { .mode_name = "fireflies", .title = "Fireflies", .description = "Flickering Green Speckles", .group = 3, .seqFunction = Fireflies },
     { .mode_name = "confetti", .title = "Confetti", .description = "Multicolor Speckles", .group = 3, .seqFunction = Confetti },
     { .mode_name = "comet", .title = "Comet", .description = "Comet with Tail", .group = 4, .seqFunction = Comet },
-    { .mode_name = "pacman", .title = "PacMan", .description = "Warm White Fade to Black", .group = 4, .seqFunction = PacMan },
+    { .mode_name = "pacman", .title = "PacMan", .description = "Pacman Eats Faster as You Ride!", .group = 4, .seqFunction = PacMan },
+    { .mode_name = "tailcolor", .title = "TailColor", .description = "Classic Headlights, Colored Tail", .group = 4, .seqFunction = TailColor },
     { .mode_name = "pixelfinder", .title = "PixelFinder", .description = "Use Brightness Slider to Select Pixel", .group = 4, .seqFunction = PixelFinder },
     { .mode_name = "empty", .title = "NA", .description = "unused", .group = 5, .seqFunction = unused0 },
     { .mode_name = "empty1", .title = "NA", .description = "unused", .group = 5, .seqFunction = unused1 },
