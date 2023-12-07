@@ -15,7 +15,7 @@ You must download the VescUart Arduino library for this code to work: https://gi
 
 
 
-- As is, it uses the Arduino Nano RP2040 Connect and NeoPixels (mine are RGB SK6812s). It should work on other IOT Nanos that use the WiFiNINA library.
+- Uses the Arduino Nano RP2040 Connect and NeoPixels (mine are RGB SK6812s). Nano 33 IoT does not have enough flash.
 - Creates it own WiFi network, which you conect to, and it hosts a webpage page at: 192.168.4.1 . This webpage allows you to control the lights. 
 - Coded for a UART connection from the VESC to Arduino, and requires the VescUart library (https://github.com/SolidGeek/VescUart). The get data setting is disabled by default, so you can choose to leave UART open for other stuff, but you will lose the directional reaction. You still have to install the library tho, unless you wanna do some coding. 
 -  If UART is connected the lights will react to the VESC direction and speed. Other parameters (voltage,  Amp h, etc ) can also be retrieved but this is not currently implemented.  
