@@ -1,7 +1,6 @@
 Wireless control of NeoPixels using a web graphical interface running on an Arduino.
 
-Designed for the Arduino Nano RP2040 connect.
-Needs an Arduino that supports WiFiNINA. 
+Designed for the Arduino Nano RP2040 connect. 
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Huge thanks to  <http://www.penguintutor.com/projects/arduino-rp2040-pixelstrip>  for creating the base code for this project.
