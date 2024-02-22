@@ -84,18 +84,18 @@ int cometWheel;                            // color
 int tailCol[3];
 
 // VESC UART Data
-double rpmHist[6] = {0, 0, 0, 0, 0, 0};    // take past 6 rpm value, 300 ms window
-int vescDir = 0;                           // current OW direction: 1 forward, -1 backward, 0 idle
+double rpmHist[6] = {0, 0, 0, 0, 0, 0};    // take past 6 rpm value, 300 ms window. "Real time" speed data is index 0
+int vescDir = 0;                           // current OW state: 1 traveling forward, -1 traveling backward, 0 idle
 bool braking = false;                      // true when rpm decel detected
 bool brakingFaded = true;                  // flag for transitions between brakelights and tail lights
 int brakingFadeSteps = 20;                 // 20 steps to fade to normal after braking
 int brakingFadeIndex = 0;                  // fade step index
 
-bool dirFaded = true;                      // tracks changing direction red/white fading progress
+bool dirFaded = true;                      // is the direction faded? false during red/white fading procress, true when finished
 int fadeDir = 0;                           // requested fade direction
-int dirSet = 0;                            // which direction was just set as front -1 rev, 1 forw, 0 idle
+int dirSet = 1;                            // is the direction currently set? -1 reverse, 1 forward, 0 during fade process
 
-const double idleThresholdRpm = idleThresholdMph / (11.0 * PI * 60.0) * 63360.0 * 15.0;     // converts mph to erpm (15 for 30/2 motor poles)
+const double idleThresholdRpm = idleThresholdMph / (wheelDiameter * PI * 60.0) * 63360.0 * 15.0;     // converts mph to erpm (15 for 30/2 motor poles)
 
 // Pattern Types (any new pattern must be added here):
 enum  pattern { NONE, STANDARD, RAINBOW, COLOR_WIPE, FADE, LAVA, CANOPY, OCEAN, ROLLING_WAVE, COLOR_WAVE, FIREFLIES, CONFETTI, COMET, PACMAN, TAIL_COLOR, PIXEL_FINDER};
@@ -183,7 +183,7 @@ class NeoPatterns : public Adafruit_NeoPixel
           default:
             break;
         }
-        // Use onboard LED to copy first pixel
+        // Use onboard arduino LED to copy first pixel
         if (cmdArr[1] == 0){
           analogWrite(LEDR, 255 - cmdArr[2] * 0.75);
           analogWrite(LEDG, 255 - cmdArr[3] * 0.75);
@@ -216,88 +216,69 @@ class NeoPatterns : public Adafruit_NeoPixel
 
 // 2. PATTERNS==========================================================================================================================================
 // 2.0 Standard-------------------------------------------------------------
-    void Standard()//direction dir = FORWARD)
+    void Standard()
     {
       ActivePattern = STANDARD;
       Interval = 50;
-      TotalSteps = 10;
+      TotalSteps = 15;
       Index = 0;
     }
 
     void StandardUpdate()
     { 
-      if((rpmHist[0] * rpmHist[1] < 0 || rpmHist[0] * rpmHist[2] < 0 ) && dirFaded){        // detects direction flip, checks two steps back into history in case "0" is captured
-        dirFaded = false;                                     // flag for fading
-        if (rpmHist[0] < 0){
-          fadeDir = -1;                                       // set reversing
-        }
-        else{
-          fadeDir = 1;                                        // set forward
-        } 
-      } else if(dirFaded && dirSet == 1 && rpmHist[1] < 0){   // if fade completed but current direction is wrong 
-        dirFaded = false;                                     // flag for fade again
-        fadeDir = -1;                                         // correct the direction
-        dirSet = 0;                                           // set direction check idle 
-      } else if(dirFaded && dirSet == -1 && rpmHist[1] > 0){  
-        dirFaded = false;
-        fadeDir = 1;
-        dirSet = 0;
-      } else if(rpmHist[0] >= 0 && dirFaded){                  // if forward & fade is correct 
-        dirSet = 0;                                            // set direction check to finished
-        for(int i = 0; i < breakPoint; i++){                   // set nose color
-          setPixelColorIdleDim(i, DimColor(Color(cmdArr[2], cmdArr[3], cmdArr[4]), cmdArr[5]));
-        } 
-        for(int i = breakPoint; i < numPixels(); i++){          // set tail red, brightness scaled to rpm
-          setPixelColorIdleDim(i, Color(min(15.0 + 125.0 * pow(fabs(rpmHist[0]) / 6000.0, 2.0) , 255.0), 0, 0));
-        } 
-      } else if(rpmHist[0] < 0 && dirFaded){                    // if backward & fade is correct
-        dirSet = 0;                                             // set direction check idle
-        for(int i = breakPoint; i < numPixels(); i++){          // set tail to color
-          setPixelColorIdleDim(i, DimColor(Color(cmdArr[2], cmdArr[3], cmdArr[4]), cmdArr[5]));
-        } 
-        for(int i = 0; i < breakPoint; i++){                    // set nose red, brightness scaled to rpm
-          setPixelColorIdleDim(i, Color(min(15.0 + 125.0 * pow(fabs(rpmHist[0]) / 6000.0, 2.0) , 255.0), 0, 0));
-        }
-      } else{
-        ;
-      }
-      
-      if (!dirFaded) {                                          // if requested direction change
-        Increment();                                            // start fade index count
-        if(fadeDir == 1){                                       // if requested fade nose forward
-          for(int i = 0; i < breakPoint; i++){
-            uint8_t red = min(60.0 * (double(TotalSteps - Index - 1)/double(TotalSteps)) 
-                              + cmdArr[2] * (double(Index + 1)/double(TotalSteps)), 255.0);
-            uint8_t green = cmdArr[3] * (double(Index + 1)/double(TotalSteps));
-            uint8_t blue = cmdArr[4] * (double(Index + 1)/double(TotalSteps));
-            setPixelColorIdleDim(i, DimColor(Color(red, green, blue), cmdArr[5]));
-          }
-          for(int i = breakPoint; i < numPixels(); i++){
-            uint8_t red = min(cmdArr[2] * (double(TotalSteps - Index - 1)/double(TotalSteps)) 
-                              + 60 * (double(Index + 1)/double(TotalSteps)), 255.0);
-            uint8_t green = cmdArr[3] * (double(TotalSteps - Index - 1)/double(TotalSteps));
-            uint8_t blue = cmdArr[4] * (double(TotalSteps - Index - 1)/double(TotalSteps));
-            setPixelColorIdleDim(i, DimColor(Color(red, green, blue), cmdArr[5]));
-          }
-        } else if (fadeDir == -1){                               // if requested fade tail forward
-          for(int i = 0; i < breakPoint; i++){
-            uint8_t red = min(cmdArr[2] * (double(TotalSteps - Index - 1)/double(TotalSteps)) 
-                              + 60 * (double(Index + 1)/double(TotalSteps)), 255.0);
-            uint8_t green = cmdArr[3] * (double(TotalSteps - Index - 1)/double(TotalSteps));
-            uint8_t blue = cmdArr[4] * (double(TotalSteps - Index - 1)/double(TotalSteps));
-            setPixelColorIdleDim(i, DimColor(Color(red, green, blue), cmdArr[5]));
-          }
-          for(int i = breakPoint; i <numPixels(); i++){
-            uint8_t red = min(60 * (double(TotalSteps - Index - 1)/double(TotalSteps)) 
-                              + cmdArr[2] * (double(Index + 1)/double(TotalSteps)), 255.0);
-            uint8_t green = cmdArr[3] * (double(Index + 1)/double(TotalSteps));
-            uint8_t blue = cmdArr[4] * (double(Index + 1)/double(TotalSteps));
-            setPixelColorIdleDim(i, DimColor(Color(red, green, blue), cmdArr[5]));
+      if(dirFaded){                                                                            // if fade is completed
+        if((dirSet == 1 && rpmHist[0] < 0) || (dirSet == -1 && rpmHist[0] > 0)){               // if saved direction differs from current motor values
+          dirFaded = false;                                                                    // flag for fade
+          dirSet = 0;                                                                          // clear saved direction
+          fadeDir = rpmHist[0] < 0 ? -1 : 1;                                                   // choose fade direction       
+        } else if(rpmHist[0] >= 0){                              // if forward & fade is correct 
+          for(int i = 0; i < breakPoint; i++){                   // set nose color
+            setPixelColorIdleDim(i, DimColor(Color(cmdArr[2], cmdArr[3], cmdArr[4]), cmdArr[5]));
+          } 
+          for(int i = breakPoint; i < numPixels(); i++){         // set tail red, brightness scaled to rpm
+            setPixelColorIdleDim(i, Color(min(15.0 + 125.0 * pow(fabs(rpmHist[0]) / 6000.0, 2.0) , 255.0), 0, 0));
+          } 
+        } else if(rpmHist[0] < 0){                               // if backward & fade is correct
+          for(int i = breakPoint; i < numPixels(); i++){         // set tail to color
+            setPixelColorIdleDim(i, DimColor(Color(cmdArr[2], cmdArr[3], cmdArr[4]), cmdArr[5]));
+          } 
+          for(int i = 0; i < breakPoint; i++){                    // set nose red, brightness scaled to rpm
+            setPixelColorIdleDim(i, Color(min(15.0 + 125.0 * pow(fabs(rpmHist[0]) / 6000.0, 2.0) , 255.0), 0, 0));
           }
         }
       }
-      
-      //checkBraking();
+
+      if(!dirFaded) {                                             // if flag requests fading
+        if(fadeDir == 1){                                         // if requested nose forward
+          for(int i = 0; i < breakPoint; i++){                    // fade nose to color
+            uint8_t red = min((60 * (TotalSteps - Index) + (cmdArr[2] * Index)) / TotalSteps, 255.0);
+            uint8_t green = (cmdArr[3] * Index) / TotalSteps;
+            uint8_t blue = (cmdArr[4] * Index) / TotalSteps;
+            setPixelColorIdleDim(i, DimColor(Color(red, green, blue), cmdArr[5]));
+          }
+          for(int i = breakPoint; i < numPixels(); i++){          // fade tail red
+            uint8_t red = min((cmdArr[2] * (TotalSteps - Index) + (60 * Index)) / TotalSteps, 255.0);
+            uint8_t green = (cmdArr[3] * (TotalSteps - Index)) / TotalSteps;
+            uint8_t blue = (cmdArr[4] * (TotalSteps - Index)) / TotalSteps;
+            setPixelColorIdleDim(i, DimColor(Color(red, green, blue), cmdArr[5]));
+          }
+        } else if (fadeDir == -1){                                // if requested tail forward
+          for(int i = 0; i < breakPoint; i++){                    // fade nose red
+            uint8_t red = min((cmdArr[2] * (TotalSteps - Index) + (60 * Index)) / TotalSteps, 255.0);
+            uint8_t green = (cmdArr[3] * (TotalSteps - Index)) / TotalSteps;
+            uint8_t blue = (cmdArr[4] * (TotalSteps - Index)) / TotalSteps;
+            setPixelColorIdleDim(i, DimColor(Color(red, green, blue), cmdArr[5]));
+          }
+          for(int i = breakPoint; i < numPixels(); i++){           // fade tail to color
+            uint8_t red = min((60 * (TotalSteps - Index) + (cmdArr[2] * Index)) / TotalSteps, 255.0);
+            uint8_t green = (cmdArr[3] * Index) / TotalSteps;
+            uint8_t blue = (cmdArr[4] * Index) / TotalSteps;
+            setPixelColorIdleDim(i, DimColor(Color(red, green, blue), cmdArr[5]));
+          }
+        }
+        Increment();                                              // increment only when fading
+        // calls OnComplete when all fade steps are finished: dirFaded -> true, marks dirSet -> fadeDir, fadeDir -> 0
+      }
       show();
     }
     
@@ -305,13 +286,12 @@ class NeoPatterns : public Adafruit_NeoPixel
 
 // 2.1 Rainbow--------------------------------------------------------------
     // Initialize for a RainbowCycle
-    void Rainbow(uint8_t interval)//, direction dir = FORWARD)
+    void Rainbow(uint8_t interval)
     {
       ActivePattern = RAINBOW;
       Interval = interval;
       TotalSteps = 255;
       Index = 0;
-      //Direction = dir;
     }
 
     // Update the Rainbow Pattern
@@ -331,7 +311,7 @@ class NeoPatterns : public Adafruit_NeoPixel
 
 // 2.2 ColorWipe--------------------------------------------------------------
     // Initialize for a ColorWipe
-    void ColorWipe()//direction dir = FORWARD)
+    void ColorWipe()
     {
       ActivePattern = COLOR_WIPE;
       Interval = max(70.0 - (fabs(rpmHist[0]) / 164.0) + 5.0, 1.0);
@@ -354,7 +334,7 @@ class NeoPatterns : public Adafruit_NeoPixel
 
 // 2.3 Color Fade--------------------------------------------------------------
     // Moves from one random color to the Next
-    void Fade(uint32_t color1, uint32_t color2, uint16_t steps, uint8_t interval)//, direction dir = FORWARD)
+    void Fade(uint32_t color1, uint32_t color2, uint16_t steps, uint8_t interval)
     {
       ActivePattern = FADE;
       Interval = interval;
@@ -362,7 +342,6 @@ class NeoPatterns : public Adafruit_NeoPixel
       Color1 = color1;
       Color2 = color2;
       Index = 0;
-      //Direction = dir;
     }
 
     // Update the Fade Pattern
@@ -374,8 +353,6 @@ class NeoPatterns : public Adafruit_NeoPixel
       uint8_t green = ((Green(Color1) * (TotalSteps - Index)) + (Green(Color2) * Index)) / TotalSteps;
       uint8_t blue = ((Blue(Color1) * (TotalSteps - Index)) + (Blue(Color2) * Index)) / TotalSteps;
 
-      //checkBraking();
-      //show();
       ColorSet(DimColor(Color(red, green, blue), cmdArr[5]));
       TailTint();
       checkBraking();
@@ -419,7 +396,7 @@ class NeoPatterns : public Adafruit_NeoPixel
       show();
       Increment();
 
-      for (int i = 0; i < pts + 1; i++)
+      for (int i = 0; i < pts + 1; i++)       // after frame is shown, move one step towards fadeToArr
       {
         fadeArr[i][0] = ((fadeFromArr[i][0] * (TotalSteps - Index)) + (fadeToArr[i][0] * Index)) / TotalSteps;
         fadeArr[i][1] = ((fadeFromArr[i][1] * (TotalSteps - Index)) + (fadeToArr[i][1] * Index)) / TotalSteps;
@@ -699,12 +676,12 @@ class NeoPatterns : public Adafruit_NeoPixel
       int loc = 0;
       for (int i = 0; i < numPixels(); i++) {
         if (i == Index) {                     // if chosen pixel
-          if (cometDir == 0) {
+          if (cometDir == 0) {                // comet goes forward
             loc = i + cometStrt;
             if (loc > int(stripLength)) {
               loc -= int(stripLength);
             }
-          } else if (cometDir == 1) {
+          } else if (cometDir == 1) {         // comet goes backward
             loc = cometStrt - i;
             if (loc < 0) {
               loc += int(stripLength);
@@ -830,33 +807,34 @@ class NeoPatterns : public Adafruit_NeoPixel
 // 3. PATTERN TOOLS==========================================================================================================================================
     // Modifies colors for "tail" lights & when braking is detected-----------------------
     void checkBraking(){
-      if (disableBrakingResponse){ // exit if debug
+      if (disableBrakingResponse){ // exit if disabled
         return;
       }
 
-      if (vescDir == 0){          // when at idle
-        braking = false;
-        brakingFaded = true;
+      if (vescDir == 0){          // when at idle do nothing
+        // braking = false;
+        // brakingFaded = true;
+        return;
       }
       if (braking) {
-        if(brakingFaded && brakeBlink){       // first frame of braking
-          if (rpmHist[0] < 0){
+        if(brakingFaded && brakeBlink){                     // first frame of braking (brakingFaded is still true), checks brakeBlink enabled
+          if (rpmHist[0] < 0){                              // if forward
             for(int i = 0; i < breakPoint; i++){
-              setPixelColor(i, Color(0, 0, 0));
+              setPixelColor(i, Color(0, 0, 0));             // turn LEDs off
             }
             show();
-            delay(brakeBlink_ms);
+            delay(brakeBlink_ms);                           // delay short while
             for(int i = 0; i < breakPoint; i++){
-              setPixelColor(i, Color(255, 0, 0));
+              setPixelColor(i, Color(255, 0, 0));           // set LEDs red
+            }
+            show();                                         
+            delay(brakeBlink_ms);                           // delay short while
+            for(int i = 0; i < breakPoint; i++){
+              setPixelColor(i, Color(0, 0, 0));             // turn LEDs off
             }
             show();
-            delay(brakeBlink_ms);
-            for(int i = 0; i < breakPoint; i++){
-              setPixelColor(i, Color(0, 0, 0));
-            }
-            show();
-            delay(brakeBlink_ms);
-          } else {
+            delay(brakeBlink_ms);                           // delay short while...
+          } else {                                          // if going backwards, do same but for nose
             for(int i = breakPoint; i < numPixels(); i++){
               setPixelColor(i, Color(0, 0, 0));
             }
@@ -875,41 +853,42 @@ class NeoPatterns : public Adafruit_NeoPixel
           }
         }
 
-        brakingFaded = false;
+        brakingFaded = false;                         // flags for fade back to pattern
+
         if (rpmHist[0] < 0){
           for(int i = 0; i < breakPoint; i++){
-            setPixelColor(i, Color(255, 0, 0));
+            setPixelColor(i, Color(255, 0, 0));       // sets nose to red to complete blink pattern
           }
         } else {
           for(int i = breakPoint; i < numPixels(); i++){
-            setPixelColor(i, Color(255, 0, 0));
+            setPixelColor(i, Color(255, 0, 0));       // sets tail red
           } 
         }
-      } else if (!brakingFaded && !braking) {         // first "frame" after braking is no longer detected
+      } else if (!brakingFaded && !braking) {         // first "frame" after braking is no longer detected fade back to pattern
         if (rpmHist[0] >= 0){
           for (int i = breakPoint; i < numPixels(); i++){
-            uint8_t red = min(255 * (double(brakingFadeSteps - brakingFadeIndex) / double(brakingFadeSteps)) + Red(getPixelColor(i)), 255);
-            uint8_t green = Green(getPixelColor(i)) * (double(brakingFadeIndex) / double(brakingFadeSteps));
-            uint8_t blue = Blue(getPixelColor(i)) * (double(brakingFadeIndex) / double(brakingFadeSteps));
+            uint8_t red = (255 * (brakingFadeSteps - brakingFadeIndex) + (Red(getPixelColor(i)) * brakingFadeIndex)) / brakingFadeSteps;
+            uint8_t green = (Green(getPixelColor(i)) * brakingFadeIndex) / brakingFadeSteps;
+            uint8_t blue = (Blue(getPixelColor(i)) * brakingFadeIndex) / brakingFadeSteps;
             setPixelColor(i, Color(red, green, blue));
           }
         } else if (rpmHist[0] < 0){
           for (int i = 0; i < breakPoint; i++){
-            uint8_t red = min(255 * (double(brakingFadeSteps - brakingFadeIndex) / double(brakingFadeSteps)) + Red(getPixelColor(i)), 255);
-            uint8_t green = Green(getPixelColor(i)) * (double(brakingFadeIndex) / double(brakingFadeSteps));
-            uint8_t blue = Blue(getPixelColor(i)) * (double(brakingFadeIndex) / double(brakingFadeSteps));
+            uint8_t red = (255 * (brakingFadeSteps - brakingFadeIndex) + (Red(getPixelColor(i)) * brakingFadeIndex)) / brakingFadeSteps;
+            uint8_t green = (Green(getPixelColor(i)) * brakingFadeIndex) / brakingFadeSteps;
+            uint8_t blue = (Blue(getPixelColor(i)) * brakingFadeIndex) / brakingFadeSteps;
             setPixelColor(i, Color(red, green, blue));
           }
         }
         brakingFadeIndex++;
-        if (brakingFadeIndex == brakingFadeSteps){
+        if (brakingFadeIndex >= brakingFadeSteps){   // fade completed, setup for next time
           brakingFaded = true;
           brakingFadeIndex = 0;
         }
       }
     }
     
-    //Called by some modes, rescales colors to add more red to "tail" lights
+    // Called by some modes, rescales colors to add more red to "tail" lights
     void TailTint(){
       if (rpmHist[0] < 0){
         for(int i = 0; i < breakPoint; i++){
@@ -927,16 +906,16 @@ class NeoPatterns : public Adafruit_NeoPixel
         } 
       }
     }
-    // Any last special modifies to be applied to each pixel, current dims lights to idleBrightness when not moving 
+    // Dims lights to idleBrightness when not moving 
     void setPixelColorIdleDim(uint16_t loc, uint32_t color) {
-      if (vescDir == 0 && enableUART){   // dim lights if below 1mph && active only when UARTData is allowed
+      if (vescDir == 0 && enableUART){   // dim lights if below 1mph... active only when UARTData is allowed
         setPixelColor(loc, DimColor(color, idleBrightness));
       }else{
         setPixelColor(loc, color);
       }
     }
 
-    // Calculate percent dimmed version of a color (used by Comet [M10])
+    // Calculate percent dimmed version of a color
     uint32_t DimColor(uint32_t color, uint8_t percent)
     {
       uint32_t dimColor = Color(uint8_t(double(Red(color)) * pow((double(percent) / 100.0), 2.0)),
@@ -1475,12 +1454,12 @@ void Transition() {
 // Called when has completed full update cycle. Restarts animation, selects new colors
 void StripComplete()
 {
-  switch (cmdArr[1]) {
-    case 0:
+  switch (cmdArr[1]) {               
+    case 0:                           // only called after direction switch fading sequence is completed
       {
-        dirFaded = true;
-        dirSet = fadeDir;
-        fadeDir = 0;
+        dirFaded = true;              // sets fade state to finished
+        dirSet = fadeDir;             // syncs to current vesc direction
+        fadeDir = 0;                  // sets directional fade flag to idle
     } case 2:
       {
         uint32_t genColor;            // will store a new Color
@@ -1754,16 +1733,12 @@ void handleWiFiUpdates(){
 
 
   // What action to perform
-  // position in sequences array for selected sequence
+  // position in mode array for selected mode
   static int mode = cmdArr[1];
-  // delay (speed) in ms (default 1 second)
+  // init brightness
   static int brightness = cmdArr[5];
-  // Whether direction reversed
+  // init LED enabled state
   static bool OnOff = cmdArr[0];
-  // Number of colour options cannot exceed number of LEDs
-  // One more included in array to allow terminating null
-  // Must always have at last one color in position 0
-  //static uint32_t colors[LED_COUNT+1] = {Strip.Color(255,255,255)};
   // should always be 1 color
   static int num_colors = 1;
 
@@ -1774,7 +1749,7 @@ void handleWiFiUpdates(){
   static int web_req = URL_DEFAULT;
 
 
-  if (millis() - lastWebmillis > 500){
+  if (millis() - lastWebmillis > 500){        // checks website every 500ms
     lastWebmillis = millis();
     WiFiClient client = server.available();   // listen for incoming clients
 
@@ -1883,7 +1858,7 @@ void handleWiFiUpdates(){
                   if (arg_name == "mode") {
                     int mode_value = get_mode (arg_value);
                     // update action if it's a valid entry (not -1)
-                    if (mode_value >=0) mode = mode_value;
+                    if (mode_value >= 0) mode = mode_value;
                   }
                   else if (arg_name == "brightness") {
                       // toInt returns 0 if error so test for that separately
@@ -1931,7 +1906,7 @@ void handleWiFiUpdates(){
   }
 }
 
-// Gets Web Command State and comapres it to current LED state. Updates LED state if they disagree.
+// Gets Web Command State and comapres it to current LED state. Updates cmadArr if they disagree.
 void updateCommands(bool reqOnOff, int reqMode, int reqRed, int reqGreen, int reqBlue, int reqBrightness){
   if (cmdArr[0] != reqOnOff || cmdArr[1] != reqMode || cmdArr[2] != reqRed || cmdArr[3] != reqGreen || cmdArr[4] != reqBlue){
     cmdArr[0] = reqOnOff;
@@ -1941,7 +1916,8 @@ void updateCommands(bool reqOnOff, int reqMode, int reqRed, int reqGreen, int re
     cmdArr[4] = reqBlue;
     ControlPanel();
   }
-    if (cmdArr[5] != reqBrightness){
+  
+  if (cmdArr[5] != reqBrightness){
     cmdArr[5] = reqBrightness;
   }
 }
@@ -1962,7 +1938,7 @@ void read_colors (String color_string){
   String this_color_string = color_string;
   // work through colors
   // not enough characters for a string so return
-  if (this_color_string.length()<6) return;
+  if (this_color_string.length() < 6) return;
   // Convert each pair to a rgb value
 
   int r = h2col (this_color_string.substring(0, 2));
@@ -2026,19 +2002,26 @@ void printWifiStatus() {
 // 8. ==================================================================== ARDUINO MAIN LOOP ========================================================================================
 
 void setup() {
+  //wait for floatpkg to initialize
+  delay(2500);
+
   //boot up command states
-  cmdArr[0] = 1;            // 0 - off, 1 - on
-  cmdArr[1] = bootMode;            // modes 0 - 13
-  cmdArr[2] = bootRed;          // red
+  cmdArr[0] = 1;                  // 0 - off, 1 - on
+  cmdArr[1] = bootMode;           // modes 0 - 13
+  cmdArr[2] = bootRed;            // red
   cmdArr[3] = bootGreen;          // green
-  cmdArr[4] = bootBlue;          // blue
-  cmdArr[5] = bootBrightness;           // brightness slider value
+  cmdArr[4] = bootBlue;           // blue
+  cmdArr[5] = bootBrightness;     // brightness slider value
 
   usrColor[0] = cmdArr[2];
-  usrColor[1] = cmdArr[3];  // initalize user set color
+  usrColor[1] = cmdArr[3];        // initalize user set color
   usrColor[2] = cmdArr[4];  
 
-  Serial.begin(9600);       
+  Serial.begin(9600);     
+  
+  Serial1.begin(115200);           
+  while(!Serial1) {;}
+  vesc.setSerialPort(&Serial1);   // VESC UART data
 
  // check for the WiFi module:
   if (WiFi.status() == WL_NO_MODULE) {
@@ -2059,17 +2042,13 @@ void setup() {
     while (true);
   }
   
-  // wait 100 ms for connection:
+  // wait 100 ms for web connection:
   delay(100);
 
   server.begin();                           // start the web server on port 80
   if (DEBUG > 0) printWifiStatus();         // you're connected now, so print out the status
 
-  Serial1.begin(115200);                    // VESC UART data
-  vesc.setSerialPort(&Serial1);
-
   // initialize pixels
-  //Strip.Color1 = Strip.Wheel(random(255));
   Strip.Color2 = Strip.Wheel(random(255));
   Strip.begin();
   Strip.setBrightness(master_brightness);   // Set hard brightness limiter
